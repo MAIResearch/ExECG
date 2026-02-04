@@ -18,6 +18,7 @@ dependencies = [
     "requests",
     "tqdm",
     "gdown",
+    "ipython",
 ]
 
 [project.optional-dependencies]

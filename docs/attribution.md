@@ -23,7 +23,7 @@ gradcam = GradCAM(wrapper)
 
 # 3. Generate attribution
 ecg_data = torch.randn(1, 12, 2500)  # (batch, n_leads, seq_length)
-result = gradcam.explain(ecg_data, target=0, target_layer_name="conv3")
+result = gradcam.explain(ecg_data, target=1, target_layers="conv3")
 
 # 4. Access results
 inputs = result["inputs"]      # numpy array (1, 12, 2500)
@@ -39,26 +39,26 @@ Gradient-weighted Class Activation Mapping for 1D ECG signals.
 #### Constructor
 
 ```python
-GradCAM(model, relu_attributions=True, normalize_attributions=True)
+GradCAM(model, absolute=True, normalize=True)
 ```
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `model` | TorchModelWrapper | required | Wrapped model instance |
-| `relu_attributions` | bool | `True` | Apply ReLU to keep only positive contributions |
-| `normalize_attributions` | bool | `True` | Normalize output to [0, 1] |
+| `absolute` | bool | `True` | Apply ReLU to keep only positive contributions |
+| `normalize` | bool | `True` | Normalize output to [0, 1] |
 
 #### explain()
 
 ```python
-explain(inputs, target=None, target_layer_name=None, method="gradcam", **kwargs)
+explain(inputs, target=None, target_layers=None, method="gradcam", **kwargs)
 ```
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `inputs` | torch.Tensor | required | ECG tensor `(1, n_leads, seq_length)` |
 | `target` | int, list, tensor | `None` | Target class index. If `None`, uses predicted class |
-| `target_layer_name` | str | required | Name of convolutional layer for CAM |
+| `target_layers` | str | required | Name of convolutional layer for CAM |
 | `method` | str | `"gradcam"` | Attribution method |
 
 **Available methods:**
@@ -86,14 +86,14 @@ Gradient-based saliency maps for ECG signals.
 #### Constructor
 
 ```python
-SaliencyMap(model, absolute_gradients=True, normalize_gradients=True)
+SaliencyMap(model, absolute=True, normalize=True)
 ```
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `model` | TorchModelWrapper | required | Wrapped model instance |
-| `absolute_gradients` | bool | `True` | Take absolute value of gradients |
-| `normalize_gradients` | bool | `True` | Normalize output to [0, 1] |
+| `absolute` | bool | `True` | Take absolute value of gradients |
+| `normalize` | bool | `True` | Normalize output to [0, 1] |
 
 #### explain()
 
@@ -113,7 +113,7 @@ explain(inputs, target=None, method="vanilla_saliency", **kwargs)
 |--------|-------------|----------------------|
 | `"vanilla_saliency"` | Simple input gradients | - |
 | `"smooth_grad"` | Averaged gradients from noisy inputs | `n_samples` (default: 50), `noise_level` (default: 0.1) |
-| `"integrated_gradients"` | Path-integrated gradients | `steps` (default: 50), `baseline` (default: zeros) |
+| `"integrated_gradients"` | Path-integrated gradients | `n_steps` (default: 50), `baseline` (default: zeros) |
 
 **Returns:**
 ```python
@@ -135,24 +135,24 @@ gradcam = GradCAM(wrapper)
 # Standard Grad-CAM
 result = gradcam.explain(
     ecg_data,
-    target=0,
-    target_layer_name="conv3",
+    target=1,
+    target_layers="conv3",
     method="gradcam"
 )
 
 # Grad-CAM++
 result = gradcam.explain(
     ecg_data,
-    target=0,
-    target_layer_name="conv3",
+    target=1,
+    target_layers="conv3",
     method="gradcam_pp"
 )
 
 # Guided Grad-CAM (returns per-lead attribution)
 result = gradcam.explain(
     ecg_data,
-    target=0,
-    target_layer_name="conv3",
+    target=1,
+    target_layers="conv3",
     method="guided_gradcam"
 )
 ```
@@ -165,12 +165,12 @@ from execg.attribution import SaliencyMap
 saliency = SaliencyMap(wrapper)
 
 # Vanilla Saliency
-result = saliency.explain(ecg_data, target=0, method="vanilla_saliency")
+result = saliency.explain(ecg_data, target=1, method="vanilla_saliency")
 
 # SmoothGrad
 result = saliency.explain(
     ecg_data,
-    target=0,
+    target=1,
     method="smooth_grad",
     n_samples=50,
     noise_level=0.1
@@ -179,9 +179,9 @@ result = saliency.explain(
 # Integrated Gradients
 result = saliency.explain(
     ecg_data,
-    target=0,
+    target=1,
     method="integrated_gradients",
-    steps=50
+    n_steps=50
 )
 ```
 
@@ -209,9 +209,9 @@ ExECG provides built-in visualization functions for attribution results.
 Plot ECG signal with attribution heatmap below.
 
 ```python
-from execg.visualization import plot_attribution
+from execg.visualizer import plot_attribution
 
-result = gradcam.explain(ecg_data, target=0, target_layer_name="conv3")
+result = gradcam.explain(ecg_data, target=1, target_layers="conv3")
 
 plot_attribution(
     ecg=result["inputs"].squeeze(),    # (12, seq_length)
@@ -241,12 +241,12 @@ plot_attribution(
 Compare multiple attribution methods side by side.
 
 ```python
-from execg.visualization import plot_attribution_comparison
+from execg.visualizer import plot_attribution_comparison
 
 # Generate attributions with different methods
-gradcam_result = gradcam.explain(ecg_data, target=0, target_layer_name="conv3")
-saliency_result = saliency.explain(ecg_data, target=0, method="vanilla_saliency")
-smoothgrad_result = saliency.explain(ecg_data, target=0, method="smooth_grad")
+gradcam_result = gradcam.explain(ecg_data, target=1, target_layers="conv3")
+saliency_result = saliency.explain(ecg_data, target=1, method="vanilla_saliency")
+smoothgrad_result = saliency.explain(ecg_data, target=1, method="smooth_grad")
 
 # Compare methods
 methods_dict = {
@@ -276,7 +276,7 @@ plot_attribution_comparison(
 ### Utility Functions
 
 ```python
-from execg.visualization import bin_attribution, normalize_attribution
+from execg.visualizer import bin_attribution, normalize_attribution
 
 # Bin attribution data for smoother visualization
 binned = bin_attribution(attribution_1d, bin_size=25)

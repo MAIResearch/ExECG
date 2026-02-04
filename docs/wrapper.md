@@ -142,7 +142,7 @@ Make predictions with the wrapped model.
 ```python
 output = wrapper.predict(
     inputs,                  # (1, 12, seq_length)
-    output_idx=None,         # Optional: select specific output
+    target=None,         # Optional: select specific output
     requires_grad=False      # Enable gradient tracking
 )
 ```
@@ -152,7 +152,7 @@ output = wrapper.predict(
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `inputs` | `torch.Tensor` | required | ECG tensor `(1, n_leads, seq_length)` |
-| `output_idx` | `int` or `None` | `None` | If set, returns only `output[:, idx:idx+1]` |
+| `target` | `int` or `None` | `None` | If set, returns only `output[:, idx:idx+1]` |
 | `requires_grad` | `bool` | `False` | Enable gradient computation |
 
 **Examples:**
@@ -162,7 +162,7 @@ output = wrapper.predict(
 output = wrapper.predict(ecg)  # (1, 2)
 
 # Get probability of class 0 only
-prob_class0 = wrapper.predict(ecg, output_idx=0)  # (1, 1)
+prob_class0 = wrapper.predict(ecg, target=0)  # (1, 1)
 
 # Enable gradients for XAI methods
 output = wrapper.predict(ecg, requires_grad=True)
@@ -369,6 +369,6 @@ print(f"Layers: {wrapper.get_layer_names()}")
 
 # Use with GradCAM
 gradcam = GradCAM(wrapper)
-result = gradcam.explain(ecg, target=1, target_layer_name="conv3")
+result = gradcam.explain(ecg, target=1, target_layers="conv3")
 print(f"Attribution shape: {result['results'].shape}")
 ```

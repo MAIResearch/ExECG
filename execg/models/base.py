@@ -33,14 +33,14 @@ class BaseModelWrapper(ABC):
     def predict(
         self,
         inputs: torch.Tensor,
-        output_idx: Optional[int] = None,
+        target: Optional[int] = None,
         requires_grad: bool = False,
     ) -> torch.Tensor:
         """Make predictions using the wrapped model.
 
         Args:
             inputs: Input ECG tensor of shape (1, n_leads, seq_length).
-            output_idx: If specified, return only the output at this index.
+            target: If specified, return only the output at this index.
             requires_grad: If True, enable gradient computation.
 
         Returns:

@@ -52,7 +52,7 @@ def generate_concept_dict(
     data_name: str,
     target_concepts: List[str],
     num_random_concepts: int = 10,
-    num_samples: int = 200,
+    n_samples: int = 200,
     random_seed: int = 42,
     verbose: bool = True,
 ) -> Tuple[Dict[str, pd.DataFrame], Dict[str, pd.DataFrame]]:
@@ -62,7 +62,7 @@ def generate_concept_dict(
         data_name: Dataset name (e.g., 'physionet2021').
         target_concepts: List of target concept names.
         num_random_concepts: Number of random concepts to generate.
-        num_samples: Number of samples per concept.
+        n_samples: Number of samples per concept.
         random_seed: Random seed for reproducibility.
         verbose: Print progress messages.
 
@@ -122,8 +122,8 @@ def generate_concept_dict(
         source_list = target_df.source.value_counts(ascending=True).index.tolist()
         source_sample_list = []
 
-        remain_n = num_samples
-        each_n = int(num_samples / len(source_list))
+        remain_n = n_samples
+        each_n = int(n_samples / len(source_list))
 
         for i, source in enumerate(source_list):
             source_sample_df = target_df[target_df.source == source]
@@ -149,7 +149,7 @@ def generate_concept_dict(
         control_filename_set = control_filename_set - set(target_df.filename.tolist())
 
         if verbose:
-            if len(filename_list) < num_samples:
+            if len(filename_list) < n_samples:
                 print(f"  [Warning] Insufficient samples: {len(filename_list)}")
             else:
                 print(f"  [OK] {len(filename_list)} samples prepared")
@@ -162,7 +162,7 @@ def generate_concept_dict(
             random_sample_df, label_df, on="filename", how="inner"
         )
 
-        each_n = int(num_samples / len(random_sample_df.source.unique()))
+        each_n = int(n_samples / len(random_sample_df.source.unique()))
 
         random_sample_df = random_sample_df.groupby("source").sample(
             each_n, random_state=random_seed + random_idx
@@ -220,10 +220,10 @@ def generate_datasets(
     data_name: str,
     data_dir: str,
     target_concepts: List[str],
-    model_input_sampling_rate: int,
-    model_input_duration: int,
+    sampling_rate: int,
+    duration: int,
     num_random_concepts: int = 10,
-    num_samples: int = 200,
+    n_samples: int = 200,
     random_seed: int = 42,
     device: str = "cpu",
     verbose: bool = True,
@@ -234,10 +234,10 @@ def generate_datasets(
         data_name: Dataset name (e.g., 'physionet2021').
         data_dir: Directory containing ECG .npz files.
         target_concepts: List of target concept names.
-        model_input_sampling_rate: Target sampling rate for model input.
-        model_input_duration: Target duration in seconds for model input.
+        sampling_rate: Target sampling rate for model input.
+        duration: Target duration in seconds for model input.
         num_random_concepts: Number of random concepts to generate.
-        num_samples: Number of samples per concept.
+        n_samples: Number of samples per concept.
         random_seed: Random seed for reproducibility.
         device: Device to load tensors to.
         verbose: Print progress messages.
@@ -251,12 +251,12 @@ def generate_datasets(
         data_name=data_name,
         target_concepts=target_concepts,
         num_random_concepts=num_random_concepts,
-        num_samples=num_samples,
+        n_samples=n_samples,
         random_seed=random_seed,
         verbose=verbose,
     )
 
-    transform = SignalTransform(model_input_sampling_rate, model_input_duration)
+    transform = SignalTransform(sampling_rate, duration)
 
     target_concept_datasets = {}
     for concept_name, concept_df in target_concept_dict.items():
@@ -289,14 +289,14 @@ class SignalTransform:
     """Transform for resampling and padding ECG signals.
 
     Args:
-        model_input_sampling_rate: Target sampling rate (Hz).
-        model_input_duration: Target duration (seconds).
+        sampling_rate: Target sampling rate (Hz).
+        duration: Target duration (seconds).
     """
 
-    def __init__(self, model_input_sampling_rate: int, model_input_duration: int):
-        self.model_input_sampling_rate = model_input_sampling_rate
-        self.model_input_duration = model_input_duration
-        self.target_length = int(model_input_sampling_rate * model_input_duration)
+    def __init__(self, sampling_rate: int, duration: int):
+        self.sampling_rate = sampling_rate
+        self.duration = duration
+        self.target_length = int(sampling_rate * duration)
 
     def __call__(self, signal: np.ndarray, original_sampling_rate: int) -> torch.Tensor:
         """Apply transformation to the signal.
@@ -310,8 +310,8 @@ class SignalTransform:
         """
         n_leads, n_samples = signal.shape
 
-        if original_sampling_rate != self.model_input_sampling_rate:
-            ratio = self.model_input_sampling_rate / original_sampling_rate
+        if original_sampling_rate != self.sampling_rate:
+            ratio = self.sampling_rate / original_sampling_rate
             new_length = int(n_samples * ratio)
 
             resampled_signal = np.zeros((n_leads, new_length))

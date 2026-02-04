@@ -18,18 +18,18 @@ class TestGradCAMExplainValidation:
     def test_explain_missing_layer_raises_error(
         self, classification_wrapper, ecg_data_2500
     ):
-        """Test that missing target_layer_name raises ValueError."""
+        """Test that missing target_layers raises ValueError."""
         gradcam = GradCAM(classification_wrapper)
-        with pytest.raises(ValueError, match="target_layer_name must be provided"):
+        with pytest.raises(ValueError, match="target_layers must be provided"):
             gradcam.explain(ecg_data_2500)
 
     def test_explain_invalid_layer_raises_error(
         self, classification_wrapper, ecg_data_2500
     ):
-        """Test that invalid target_layer_name raises ValueError."""
+        """Test that invalid target_layers raises ValueError."""
         gradcam = GradCAM(classification_wrapper)
         with pytest.raises(ValueError, match="not found in model"):
-            gradcam.explain(ecg_data_2500, target_layer_name="invalid_layer")
+            gradcam.explain(ecg_data_2500, target_layers="invalid_layer")
 
     def test_explain_invalid_method_raises_error(
         self, classification_wrapper, ecg_data_2500
@@ -38,7 +38,7 @@ class TestGradCAMExplainValidation:
         gradcam = GradCAM(classification_wrapper)
         with pytest.raises(ValueError, match="Unknown method"):
             gradcam.explain(
-                ecg_data_2500, target_layer_name="conv3", method="invalid_method"
+                ecg_data_2500, target_layers="conv3", method="invalid_method"
             )
 
 
@@ -49,7 +49,7 @@ class TestGradCAMClassification:
         """Test GradCAM explain with gradcam method."""
         gradcam = GradCAM(classification_wrapper)
         result = gradcam.explain(
-            ecg_data_2500, target=0, target_layer_name="conv3", method="gradcam"
+            ecg_data_2500, target=0, target_layers="conv3", method="gradcam"
         )
 
         assert "inputs" in result
@@ -63,7 +63,7 @@ class TestGradCAMClassification:
         """Test GradCAM explain with guided_gradcam method."""
         gradcam = GradCAM(classification_wrapper)
         result = gradcam.explain(
-            ecg_data_2500, target=0, target_layer_name="conv3", method="guided_gradcam"
+            ecg_data_2500, target=0, target_layers="conv3", method="guided_gradcam"
         )
 
         assert "inputs" in result
@@ -77,7 +77,7 @@ class TestGradCAMClassification:
         """Test GradCAM explain with gradcam_pp method."""
         gradcam = GradCAM(classification_wrapper)
         result = gradcam.explain(
-            ecg_data_2500, target=0, target_layer_name="conv3", method="gradcam_pp"
+            ecg_data_2500, target=0, target_layers="conv3", method="gradcam_pp"
         )
 
         assert "inputs" in result
@@ -95,7 +95,7 @@ class TestGradCAMRegression:
         """Test GradCAM explain with gradcam method for regression."""
         gradcam = GradCAM(regression_wrapper)
         result = gradcam.explain(
-            ecg_data_2500, target=0, target_layer_name="conv3", method="gradcam"
+            ecg_data_2500, target=0, target_layers="conv3", method="gradcam"
         )
 
         assert "inputs" in result
@@ -160,7 +160,7 @@ class TestSaliencyMapClassification:
             ecg_data_2500,
             target=0,
             method="integrated_gradients",
-            steps=5,  # Small for faster test
+            n_steps=5,  # Small for faster test
         )
 
         assert "inputs" in result

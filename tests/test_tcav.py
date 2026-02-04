@@ -22,18 +22,18 @@ class TestSignalTransform:
     def test_init(self):
         """Test SignalTransform initialization."""
         transform = SignalTransform(
-            model_input_sampling_rate=250,
-            model_input_duration=10
+            sampling_rate=250,
+            duration=10
         )
-        assert transform.model_input_sampling_rate == 250
-        assert transform.model_input_duration == 10
+        assert transform.sampling_rate == 250
+        assert transform.duration == 10
         assert transform.target_length == 2500
 
     def test_no_resampling_needed(self):
         """Test transform when no resampling is needed."""
         transform = SignalTransform(
-            model_input_sampling_rate=500,
-            model_input_duration=10
+            sampling_rate=500,
+            duration=10
         )
         signal = np.random.randn(12, 5000)
         result = transform(signal, original_sampling_rate=500)
@@ -44,8 +44,8 @@ class TestSignalTransform:
     def test_downsample(self):
         """Test downsampling from 500Hz to 250Hz."""
         transform = SignalTransform(
-            model_input_sampling_rate=250,
-            model_input_duration=10
+            sampling_rate=250,
+            duration=10
         )
         signal = np.random.randn(12, 5000)  # 500Hz, 10s
         result = transform(signal, original_sampling_rate=500)
@@ -55,8 +55,8 @@ class TestSignalTransform:
     def test_upsample(self):
         """Test upsampling from 250Hz to 500Hz."""
         transform = SignalTransform(
-            model_input_sampling_rate=500,
-            model_input_duration=10
+            sampling_rate=500,
+            duration=10
         )
         signal = np.random.randn(12, 2500)  # 250Hz, 10s
         result = transform(signal, original_sampling_rate=250)
@@ -66,8 +66,8 @@ class TestSignalTransform:
     def test_truncate_long_signal(self):
         """Test truncation of signals longer than target."""
         transform = SignalTransform(
-            model_input_sampling_rate=250,
-            model_input_duration=10
+            sampling_rate=250,
+            duration=10
         )
         signal = np.random.randn(12, 5000)  # Longer than 2500
         result = transform(signal, original_sampling_rate=250)
@@ -77,8 +77,8 @@ class TestSignalTransform:
     def test_pad_short_signal(self):
         """Test padding of signals shorter than target."""
         transform = SignalTransform(
-            model_input_sampling_rate=250,
-            model_input_duration=10
+            sampling_rate=250,
+            duration=10
         )
         signal = np.random.randn(12, 1000)  # Shorter than 2500
         result = transform(signal, original_sampling_rate=250)

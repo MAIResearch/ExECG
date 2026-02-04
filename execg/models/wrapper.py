@@ -76,7 +76,7 @@ class TorchModelWrapper(BaseModelWrapper):
     def predict(
         self,
         inputs: torch.Tensor,
-        output_idx: Optional[int] = None,
+        target: Optional[int] = None,
         requires_grad: bool = False,
     ) -> torch.Tensor:
         """Make predictions using the wrapped model.
@@ -84,7 +84,7 @@ class TorchModelWrapper(BaseModelWrapper):
         Args:
             inputs: Input ECG tensor of shape (1, n_leads, seq_length).
                 Example: (1, 12, 2500) for 12-lead, 250Hz, 10 seconds.
-            output_idx: If specified, return only the output at this index.
+            target: If specified, return only the output at this index.
             requires_grad: If True, enable gradient computation.
 
         Returns:
@@ -92,7 +92,7 @@ class TorchModelWrapper(BaseModelWrapper):
             - Regression: (1, 1)
             - Binary: (1, 2)
             - Multiclass: (1, num_classes)
-            - If output_idx specified: (1, 1)
+            - If target specified: (1, 1)
         """
         self._validate_input(inputs)
 
@@ -108,8 +108,8 @@ class TorchModelWrapper(BaseModelWrapper):
         if self._postprocess:
             outputs = self._postprocess(outputs)
 
-        if output_idx is not None:
-            return outputs[:, output_idx : output_idx + 1]
+        if target is not None:
+            return outputs[:, target : target + 1]
 
         return outputs
 
@@ -195,5 +195,8 @@ class TorchModelWrapper(BaseModelWrapper):
         return f"TorchModelWrapper(model={self.model.__class__.__name__}, device={self._device})"
 
     def to(self, device):
+        if isinstance(device, str):
+            device = torch.device(device)
         self._device = device
         self.model.to(self._device)
+        return self

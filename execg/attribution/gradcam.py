@@ -20,25 +20,25 @@ class GradCAM(AttributionBase):
     def __init__(
         self,
         model: TorchModelWrapper,
-        relu_attributions: bool = True,
-        normalize_attributions: bool = True,
+        absolute: bool = True,
+        normalize: bool = True,
     ):
         """Initialize GradCAM.
 
         Args:
             model: TorchModelWrapper instance containing the model to explain.
-            relu_attributions: Whether to apply ReLU to the attribution scores.
-            normalize_attributions: Whether to normalize the attribution scores.
+            absolute: Whether to apply ReLU to the attribution scores.
+            normalize: Whether to normalize the attribution scores.
         """
         super().__init__(model)
-        self.relu_attributions = relu_attributions
-        self.normalize_attributions = normalize_attributions
+        self.absolute = absolute
+        self.normalize = normalize
 
     def explain(
         self,
         inputs: torch.Tensor,
         target: Optional[Union[int, List[int], torch.Tensor]] = None,
-        target_layer_name: str = None,
+        target_layers: str = None,
         method: str = "gradcam",
         **kwargs,
     ) -> Dict[str, Any]:
@@ -47,7 +47,7 @@ class GradCAM(AttributionBase):
         Args:
             inputs: Input tensor of shape (batch_size, channels, seq_length).
             target: Target class(es) to explain. If None, uses model's prediction.
-            target_layer_name: Name of the layer to use for GradCAM analysis.
+            target_layers: Name of the layer to use for GradCAM analysis.
             method: Attribution method ('gradcam', 'guided_gradcam', 'gradcam_pp').
             **kwargs: Additional parameters for the specific method.
 
@@ -55,14 +55,14 @@ class GradCAM(AttributionBase):
             Dictionary with 'inputs' and 'results' as numpy arrays.
 
         Raises:
-            ValueError: If target_layer_name is None or not found in model.
+            ValueError: If target_layers is None or not found in model.
         """
-        if target_layer_name is None:
-            raise ValueError("target_layer_name must be provided for GradCAM")
+        if target_layers is None:
+            raise ValueError("target_layers must be provided for GradCAM")
 
-        if target_layer_name not in self.model.get_layer_names():
+        if target_layers not in self.model.get_layer_names():
             raise ValueError(
-                f"Layer '{target_layer_name}' not found in model. "
+                f"Layer '{target_layers}' not found in model. "
                 f"Available layers: {self.model.get_layer_names()}"
             )
 
@@ -72,15 +72,15 @@ class GradCAM(AttributionBase):
 
         if method == "gradcam":
             attributions = self._gradcam(
-                inputs, target_indices, target_layer_name, **kwargs
+                inputs, target_indices, target_layers, **kwargs
             )
         elif method == "guided_gradcam":
             attributions = self._guided_gradcam(
-                inputs, target_indices, target_layer_name, **kwargs
+                inputs, target_indices, target_layers, **kwargs
             )
         elif method == "gradcam_pp":
             attributions = self._gradcam_pp(
-                inputs, target_indices, target_layer_name, **kwargs
+                inputs, target_indices, target_layers, **kwargs
             )
         else:
             raise ValueError(
@@ -88,7 +88,7 @@ class GradCAM(AttributionBase):
                 f"Available methods: gradcam, guided_gradcam, gradcam_pp"
             )
 
-        if self.normalize_attributions:
+        if self.normalize:
             attributions = self.normalize_attribution(attributions)
 
         if isinstance(attributions, torch.Tensor):
@@ -103,7 +103,7 @@ class GradCAM(AttributionBase):
         self,
         inputs: torch.Tensor,
         target_indices: torch.Tensor,
-        target_layer_name: str,
+        target_layers: str,
         **kwargs,
     ) -> torch.Tensor:
         """Generate Grad-CAM attribution scores for the given inputs.
@@ -115,7 +115,7 @@ class GradCAM(AttributionBase):
         Args:
             inputs: Input tensor of shape (1, n_leads, seq_length).
             target_indices: Target class indices to explain.
-            target_layer_name: Name of the convolutional layer to use.
+            target_layers: Name of the convolutional layer to use.
             **kwargs: Additional parameters.
 
         Returns:
@@ -126,7 +126,7 @@ class GradCAM(AttributionBase):
         target_class = target_indices[0].item()
 
         activations, gradients = self.model.get_layer_gradients(
-            inputs, target_class, target_layer_name
+            inputs, target_class, target_layers
         )
 
         activations = torch.tensor(activations, device=self.model.device)
@@ -140,7 +140,7 @@ class GradCAM(AttributionBase):
         weights = torch.mean(gradients, dim=-1)
         cam = torch.sum(weights.unsqueeze(-1) * activations, dim=0)
 
-        if self.relu_attributions:
+        if self.absolute:
             cam = F.relu(cam)
 
         cam = F.interpolate(
@@ -212,7 +212,7 @@ class GradCAM(AttributionBase):
         self,
         inputs: torch.Tensor,
         target_indices: torch.Tensor,
-        target_layer_name: str,
+        target_layers: str,
         **kwargs,
     ) -> torch.Tensor:
         """Generate Guided Grad-CAM attribution scores for the given inputs.
@@ -229,7 +229,7 @@ class GradCAM(AttributionBase):
         Args:
             inputs: Input tensor of shape (1, n_leads, seq_length).
             target_indices: Target class indices to explain.
-            target_layer_name: Name of the convolutional layer to use.
+            target_layers: Name of the convolutional layer to use.
             **kwargs: Additional parameters.
 
         Returns:
@@ -237,7 +237,7 @@ class GradCAM(AttributionBase):
         """
         # _gradcam now returns (1, n_leads, seq_length)
         gradcam_attr = self._gradcam(
-            inputs, target_indices, target_layer_name, **kwargs
+            inputs, target_indices, target_layers, **kwargs
         )
         guided_gradients = self._guided_backprop(inputs, target_indices)
 
@@ -250,7 +250,7 @@ class GradCAM(AttributionBase):
         self,
         inputs: torch.Tensor,
         target_indices: torch.Tensor,
-        target_layer_name: str,
+        target_layers: str,
         **kwargs,
     ) -> torch.Tensor:
         """Generate Grad-CAM++ attribution scores for the given inputs.
@@ -266,7 +266,7 @@ class GradCAM(AttributionBase):
         Args:
             inputs: Input tensor of shape (1, n_leads, seq_length).
             target_indices: Target class indices to explain.
-            target_layer_name: Name of the convolutional layer to use.
+            target_layers: Name of the convolutional layer to use.
             **kwargs: Additional parameters including 'eps' for numerical stability.
 
         Returns:
@@ -278,7 +278,7 @@ class GradCAM(AttributionBase):
         target_class = target_indices[0].item()
 
         activations, gradients = self.model.get_layer_gradients(
-            inputs, target_class, target_layer_name
+            inputs, target_class, target_layers
         )
 
         activations = torch.tensor(activations, device=self.model.device)
@@ -307,7 +307,7 @@ class GradCAM(AttributionBase):
 
         cam = torch.sum(weights.unsqueeze(-1) * activations, dim=0)
 
-        if self.relu_attributions:
+        if self.absolute:
             cam = F.relu(cam)
 
         cam = F.interpolate(

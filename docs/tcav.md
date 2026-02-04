@@ -22,12 +22,13 @@ from execg.concept import TCAV
 # Initialize TCAV
 tcav = TCAV(
     model=your_model,
-    model_layers_list=["conv3"],
-    model_input_sampling_rate=250,
-    model_input_duration=10,
+    target_layers=["conv3"],
+    sampling_rate=250,
+    duration=10,
     data_name="physionet2021",
-    data_dir="/path/to/physionet_numpy",
-    target_concepts=["atrial fibrillation", "sinus rhythm"]
+    data_dir="./data/physionet2021",
+    target_concepts=["atrial fibrillation", "sinus rhythm"],
+    download=True  # Auto-download concept data if not found
 )
 
 # Run TCAV analysis
@@ -36,6 +37,34 @@ results = tcav.explain(inputs, target=1)
 
 # Visualize results
 fig, ax = TCAV.plot_tcav_scores(results)
+```
+
+## Data Download
+
+TCAV requires pre-processed PhysioNet numpy data for concept generation. When `download=True`, the data will be automatically downloaded:
+
+| Property | Value |
+|----------|-------|
+| **Download size** | ~5 GB (compressed zip) |
+| **Extracted size** | ~10 GB |
+| **Total space needed** | ~10 GB (archive is removed after extraction) |
+
+```python
+# Auto-download when initializing TCAV
+tcav = TCAV(
+    ...,
+    data_dir="./data/physionet2021",
+    download=True  # Downloads if data not found
+)
+
+# Or download manually using the downloader
+from execg.concept import download_tcav_concept_data
+
+download_tcav_concept_data(
+    data_name="physionet2021",
+    data_dir="./data/physionet2021",
+    download=True
+)
 ```
 
 ## API Reference
@@ -47,30 +76,34 @@ fig, ax = TCAV.plot_tcav_scores(results)
 ```python
 TCAV(
     model,
-    model_layers_list,
-    model_input_sampling_rate,
-    model_input_duration,
+    target_layers,
+    sampling_rate,
+    duration,
     data_name,
     data_dir,
     target_concepts,
     num_random_concepts=10,
-    num_samples=200,
-    random_seed=42
+    n_samples=200,
+    random_seed=42,
+    output_dir=None,
+    download=False
 )
 ```
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `model` | nn.Module | required | PyTorch model to explain |
-| `model_layers_list` | List[str] | required | Layers to analyze |
-| `model_input_sampling_rate` | float | required | Model input sampling rate (Hz) |
-| `model_input_duration` | float | required | Model input duration (seconds) |
+| `target_layers` | List[str] | required | Layers to analyze |
+| `sampling_rate` | float | required | Model input sampling rate (Hz) |
+| `duration` | float | required | Model input duration (seconds) |
 | `data_name` | str | required | Dataset name (`"physionet2021"`) |
-| `data_dir` | str | required | Directory containing `.npz` ECG files |
+| `data_dir` | str | required | Directory for concept data (download location) |
 | `target_concepts` | List[str] | required | Concept names to analyze |
 | `num_random_concepts` | int | `10` | Number of random concepts for baseline |
-| `num_samples` | int | `200` | Samples per concept |
+| `n_samples` | int | `200` | Samples per concept |
 | `random_seed` | int | `42` | Random seed for reproducibility |
+| `output_dir` | str | `None` | Directory to save TCAV results |
+| `download` | bool | `False` | Auto-download concept data if not found |
 
 #### explain()
 
@@ -146,18 +179,19 @@ from execg.concept import TCAV
 
 tcav = TCAV(
     model=afib_model,
-    model_layers_list=["conv2", "conv3", "conv4"],
-    model_input_sampling_rate=250,
-    model_input_duration=10,
+    target_layers=["conv2", "conv3", "conv4"],
+    sampling_rate=250,
+    duration=10,
     data_name="physionet2021",
-    data_dir="/path/to/data",
+    data_dir="./data/physionet2021",
     target_concepts=[
         "atrial fibrillation",
         "sinus rhythm",
         "atrial flutter"
     ],
     num_random_concepts=10,
-    num_samples=200
+    n_samples=200,
+    download=True  # Auto-download if not found
 )
 
 # Get test samples
@@ -178,7 +212,7 @@ print(f"AFib concept score: {mean:.3f} [{lower:.3f}, {upper:.3f}]")
 # Analyze multiple layers to see where concepts are important
 tcav = TCAV(
     model=model,
-    model_layers_list=["conv1", "conv2", "conv3", "conv4"],
+    target_layers=["conv1", "conv2", "conv3", "conv4"],
     ...
 )
 
@@ -190,6 +224,21 @@ for layer in ["conv1", "conv2", "conv3", "conv4"]:
     print(f"{layer}: {mean:.3f}")
 ```
 
+### Save Results
+
+```python
+# Save TCAV results to file
+tcav = TCAV(
+    model=model,
+    target_layers=["conv3"],
+    output_dir="./tcav_results",  # Results will be saved here
+    ...
+)
+
+results = tcav.explain(inputs, target=1)
+# Results are automatically saved to output_dir as JSON
+```
+
 ## Visualization
 
 ExECG provides three visualization functions for TCAV results.
@@ -199,7 +248,7 @@ ExECG provides three visualization functions for TCAV results.
 Plot TCAV scores as a heatmap.
 
 ```python
-from execg.visualization import plot_tcav_scores
+from execg.visualizer import plot_tcav_scores
 
 fig, ax = plot_tcav_scores(
     result_dict=results,
@@ -224,7 +273,7 @@ plt.savefig("tcav_heatmap.png")
 Plot TCAV scores as a bar chart for a specific layer.
 
 ```python
-from execg.visualization import plot_tcav_bar
+from execg.visualizer import plot_tcav_bar
 
 fig, ax = plot_tcav_bar(
     result_dict=results,
@@ -247,7 +296,7 @@ fig, ax = plot_tcav_bar(
 Compare TCAV scores across multiple layers.
 
 ```python
-from execg.visualization import plot_tcav_comparison
+from execg.visualizer import plot_tcav_comparison
 
 fig, axes = plot_tcav_comparison(
     result_dict=results,
@@ -269,7 +318,7 @@ fig, axes = plot_tcav_comparison(
 ```python
 import torch
 from execg.concept import TCAV
-from execg.visualization import (
+from execg.visualizer import (
     plot_tcav_scores,
     plot_tcav_bar,
     plot_tcav_comparison
@@ -283,11 +332,11 @@ model.eval()
 # Initialize TCAV
 tcav = TCAV(
     model=model,
-    model_layers_list=["conv2", "conv3", "conv4"],
-    model_input_sampling_rate=250,
-    model_input_duration=10,
+    target_layers=["conv2", "conv3", "conv4"],
+    sampling_rate=250,
+    duration=10,
     data_name="physionet2021",
-    data_dir="/data/physionet",
+    data_dir="./data/physionet2021",
     target_concepts=[
         "atrial fibrillation",
         "sinus rhythm",
@@ -295,7 +344,9 @@ tcav = TCAV(
         "sinus bradycardia"
     ],
     num_random_concepts=10,
-    num_samples=200
+    n_samples=200,
+    output_dir="./tcav_results",
+    download=True
 )
 
 # Run analysis

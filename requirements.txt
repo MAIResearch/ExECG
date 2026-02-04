@@ -7,3 +7,4 @@ pandas
 requests
 tqdm
 gdown
+ipython

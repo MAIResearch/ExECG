@@ -8,8 +8,8 @@ import torch
 import torch.nn.functional as F
 from IPython.display import clear_output
 
-from execg.counterfactual.models import MODEL_REGISTRY
-from execg.misc import get_model, match_shape, set_random_seed
+from execg.counterfactual.models import MODEL_REGISTRY, get_model
+from execg.misc import match_shape, set_random_seed
 from execg.models.wrapper import TorchModelWrapper
 
 
@@ -42,7 +42,7 @@ class StyleGANCF:
         ... )
         >>> ecg_data = torch.randn(1, 12, 5000)
         >>> cf_ecg, cf_prob, etc = cf_explainer.explain(
-        ...     ecg_data, target_idx=0, target_value=1.0
+        ...     ecg_data, target=0, target_value=1.0
         ... )
     """
 
@@ -86,7 +86,6 @@ class StyleGANCF:
         generator = get_model(
             name=generator_name,
             model_dir=model_dir,
-            registry=MODEL_REGISTRY,
             download=download,
         )
         self.generator = generator.to(self.device)
@@ -163,9 +162,7 @@ class StyleGANCF:
 
         return inputs, original_length
 
-    def _restore_output(
-        self, cf_ecg: np.ndarray, original_length: int
-    ) -> np.ndarray:
+    def _restore_output(self, cf_ecg: np.ndarray, original_length: int) -> np.ndarray:
         """Restore counterfactual output to original sampling rate and length.
 
         Args:
@@ -194,7 +191,7 @@ class StyleGANCF:
     def explain(
         self,
         inputs: torch.Tensor,
-        target_idx: Optional[Union[int, List[int], torch.Tensor]] = None,
+        target: Optional[Union[int, List[int], torch.Tensor]] = None,
         **kwargs,
     ) -> Tuple[np.ndarray, float, Dict[str, Any]]:
         """Generate counterfactual explanation for ECG input.
@@ -204,7 +201,7 @@ class StyleGANCF:
                 Must be exactly 10 seconds of data at the specified sampling_rate.
                 The input will be automatically resampled to 250Hz for the generator,
                 and the output will be resampled back to the original sampling rate.
-            target_idx: Target output index for counterfactual generation.
+            target: Target output index for counterfactual generation.
             **kwargs: Additional arguments:
                 - inversion_steps: W-inversion optimization steps (default: 1000)
                 - inversion_lr: W-inversion learning rate (default: 0.0005)
@@ -225,7 +222,7 @@ class StyleGANCF:
         Raises:
             ValueError: If input is not exactly 10 seconds
         """
-        seed = kwargs.get('random_seed', self.random_seed)
+        seed = kwargs.get("random_seed", self.random_seed)
         if seed is not None:
             set_random_seed(seed)
 
@@ -233,9 +230,11 @@ class StyleGANCF:
 
         prepared_inputs_2d = prepared_inputs.squeeze(0)
 
-        recon_ecg, w_inversion, noise = self._get_w_inversion(prepared_inputs_2d, **kwargs)
+        recon_ecg, w_inversion, noise = self._get_w_inversion(
+            prepared_inputs_2d, **kwargs
+        )
         cf_ecg_250hz, cf_prob, etc = self._get_cf(
-            prepared_inputs_2d.unsqueeze(0), w_inversion, noise, target_idx, **kwargs
+            prepared_inputs_2d.unsqueeze(0), w_inversion, noise, target, **kwargs
         )
 
         cf_ecg = self._restore_output(cf_ecg_250hz, original_length)
@@ -314,7 +313,7 @@ class StyleGANCF:
         original_ecg: torch.Tensor,
         w_styles: torch.Tensor,
         noise: torch.Tensor,
-        target_idx: Optional[Union[int, List[int], torch.Tensor]] = None,
+        target: Optional[Union[int, List[int], torch.Tensor]] = None,
         **kwargs,
     ):
         """Generate counterfactual examples using the inverted W latent vector.
@@ -323,7 +322,7 @@ class StyleGANCF:
             original_ecg: Original reconstructed ECG.
             w_styles: Inverted W latent vector.
             noise: Noise vector.
-            target_idx: Target class index for counterfactual.
+            target: Target class index for counterfactual.
             **kwargs: Additional arguments including 'cf_steps', 'cf_lr',
                 'target_value', 'layer_use', 'verbose', and 'show_plot'.
 
@@ -331,7 +330,7 @@ class StyleGANCF:
             Tuple of (counterfactual ECG, probability, metadata dict).
 
         Raises:
-            ValueError: If target_idx or target_value is not specified.
+            ValueError: If target or target_value is not specified.
         """
         steps = kwargs.get("cf_steps", 500)
         lr = kwargs.get("cf_lr", 0.0005)
@@ -340,9 +339,9 @@ class StyleGANCF:
         show_plot = kwargs.get("show_plot", False)
         layer_use = kwargs.get("layer_use", None)
 
-        if target_idx is None:
+        if target is None:
             raise ValueError(
-                "target_idx must be specified for counterfactual generation"
+                "target must be specified for counterfactual generation"
             )
 
         if target_value is None:
@@ -365,10 +364,7 @@ class StyleGANCF:
         original_shape = original_ecg.shape
         original_ecg = original_ecg.detach().clone()
 
-        ecg_for_predict = (
-            original_ecg.squeeze(0) if original_ecg.dim() == 3 else original_ecg
-        )
-        original_prob = self.model.predict(ecg_for_predict, output_idx=target_idx)
+        original_prob = self.model.predict(original_ecg, target=target)
 
         cf_direction = 1 if target_value - original_prob > 0 else -1
 
@@ -388,9 +384,8 @@ class StyleGANCF:
             )
             cf_ecg = match_shape(cf_ecg.squeeze(), original_shape)
 
-            cf_ecg_for_predict = cf_ecg.squeeze(0) if cf_ecg.dim() == 3 else cf_ecg
             cf_prob = self.model.predict(
-                cf_ecg_for_predict, output_idx=target_idx, requires_grad=True
+                cf_ecg, target=target, requires_grad=True
             )
 
             cf_prob_value = cf_prob.item()
@@ -399,16 +394,8 @@ class StyleGANCF:
             if (cf_direction > 0 and cf_prob_value > best_cf_prob_value) or (
                 cf_direction < 0 and cf_prob_value < best_cf_prob_value
             ):
-                best_cf_ecg = cf_ecg.clone()
-                best_cf_prob = cf_prob.clone()
-
-                cf_viz_results.append(
-                    best_cf_ecg.squeeze().detach().clone().cpu().numpy()
-                )
-                cf_viz_preds.append(best_cf_prob.detach().cpu().numpy())
-
-                if (cf_direction > 0 and cf_prob_value > 0.95) or (
-                    cf_direction < 0 and cf_prob_value < 0.05
+                if (cf_direction > 0 and cf_prob_value > target_value) or (
+                    cf_direction < 0 and cf_prob_value < target_value
                 ):
                     if verbose:
                         print(
@@ -416,6 +403,14 @@ class StyleGANCF:
                         )
 
                     break
+
+                best_cf_ecg = cf_ecg.clone()
+                best_cf_prob = cf_prob.clone()
+
+                cf_viz_results.append(
+                    best_cf_ecg.squeeze().detach().clone().cpu().numpy()
+                )
+                cf_viz_preds.append(best_cf_prob.detach().cpu().numpy())
 
             loss = torch.nn.functional.mse_loss(
                 cf_prob, torch.tensor(target_value).float().to(self.device)
@@ -451,5 +446,6 @@ class StyleGANCF:
             {
                 "all_cf": cf_viz_results,
                 "all_probs": cf_viz_preds,
+                "original_prob": original_prob.item(),
             },
         )

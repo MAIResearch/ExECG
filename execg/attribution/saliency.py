@@ -23,21 +23,21 @@ class SaliencyMap(AttributionBase):
     def __init__(
         self,
         model: TorchModelWrapper,
-        absolute_gradients: bool = True,
-        normalize_gradients: bool = True,
+        absolute: bool = True,
+        normalize: bool = True,
         random_seed: Optional[int] = None,
     ):
         """Initialize SaliencyMap.
 
         Args:
             model: TorchModelWrapper instance containing the model to explain.
-            absolute_gradients: Whether to take the absolute value of gradients.
-            normalize_gradients: Whether to normalize the gradients.
+            absolute: Whether to take the absolute value of gradients.
+            normalize: Whether to normalize the gradients.
             random_seed: Random seed for reproducibility (used in smooth_grad).
         """
         super().__init__(model)
-        self.absolute_gradients = absolute_gradients
-        self.normalize_gradients = normalize_gradients
+        self.absolute = absolute
+        self.normalize = normalize
         self.random_seed = random_seed
     
     def explain(
@@ -78,13 +78,13 @@ class SaliencyMap(AttributionBase):
                 f"Available methods: vanilla_saliency, smooth_grad, integrated_gradients"
             )
 
-        if self.absolute_gradients:
+        if self.absolute:
             if isinstance(attributions, np.ndarray):
                 attributions = np.abs(attributions)
             else:
                 attributions = torch.abs(attributions)
 
-        if self.normalize_gradients:
+        if self.normalize:
             attributions = self.normalize_attribution(attributions)
 
         if isinstance(attributions, torch.Tensor):
@@ -171,13 +171,13 @@ class SaliencyMap(AttributionBase):
         Args:
             inputs: Input tensor of shape (1, n_leads, seq_length).
             target_indices: Target class indices to explain.
-            **kwargs: Additional parameters including 'steps' (default: 50)
+            **kwargs: Additional parameters including 'n_steps' (default: 50)
                 and 'baseline' (default: None, uses zeros).
 
         Returns:
             Attribution scores of shape (1, n_leads, seq_length).
         """
-        steps = kwargs.get('steps', 50)
+        n_steps = kwargs.get('n_steps', 50)
         baseline = kwargs.get('baseline', None)
 
         x = inputs.clone().detach()
@@ -190,13 +190,13 @@ class SaliencyMap(AttributionBase):
 
         total_gradients = torch.zeros_like(x)
 
-        for step in range(steps):
-            alpha = step / (steps - 1) if steps > 1 else 1.0
+        for step in range(n_steps):
+            alpha = step / (n_steps - 1) if n_steps > 1 else 1.0
             interpolated_input = (baseline + alpha * (x - baseline)).to(self.model.device)
             sample_gradients = self._compute_gradients(interpolated_input, target_indices)
             total_gradients += sample_gradients
 
-        avg_gradients = total_gradients / steps
+        avg_gradients = total_gradients / n_steps
         attributions = avg_gradients * (x - baseline)
 
         return attributions

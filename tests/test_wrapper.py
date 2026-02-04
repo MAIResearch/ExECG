@@ -29,13 +29,13 @@ class TestTorchModelWrapperClassification:
         assert isinstance(output, torch.Tensor)
         assert output.shape == (1, 2)  # (1, n_classes)
 
-    def test_predict_output_idx(self, classification_wrapper, single_ecg_data):
-        """Test predict with output_idx specified."""
+    def test_predict_target(self, classification_wrapper, single_ecg_data):
+        """Test predict with target specified."""
         output_full = classification_wrapper.predict(single_ecg_data)
-        output_idx0 = classification_wrapper.predict(single_ecg_data, output_idx=0)
+        target0 = classification_wrapper.predict(single_ecg_data, target=0)
 
-        assert output_idx0.shape == (1, 1)
-        assert output_idx0.item() == pytest.approx(output_full[0, 0].item())
+        assert target0.shape == (1, 1)
+        assert target0.item() == pytest.approx(output_full[0, 0].item())
 
     def test_predict_requires_grad(self, classification_wrapper, single_ecg_data):
         """Test predict with requires_grad=True."""
@@ -81,13 +81,13 @@ class TestTorchModelWrapperRegression:
         assert isinstance(output, torch.Tensor)
         assert output.shape == (1, 1)  # (1, 1) for regression
 
-    def test_predict_output_idx(self, regression_wrapper, single_ecg_data):
-        """Test predict with output_idx=0 for regression."""
+    def test_predict_target(self, regression_wrapper, single_ecg_data):
+        """Test predict with target=0 for regression."""
         output_full = regression_wrapper.predict(single_ecg_data)
-        output_idx0 = regression_wrapper.predict(single_ecg_data, output_idx=0)
+        target0 = regression_wrapper.predict(single_ecg_data, target=0)
 
-        assert output_idx0.shape == (1, 1)
-        assert output_idx0.item() == pytest.approx(output_full[0, 0].item())
+        assert target0.shape == (1, 1)
+        assert target0.item() == pytest.approx(output_full[0, 0].item())
 
     def test_get_gradients(self, regression_wrapper, single_ecg_data):
         """Test get_gradients for regression model."""

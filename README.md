@@ -2,8 +2,7 @@
   <img src="docs/img/logo.png" alt="ExECG Logo" width="400">
 </p>
 
-# ExECG
-
+# ExECG (Explainable AI for ECG models)
 **Explainable AI Library for ECG Deep Learning Models**
 
 ExECG provides a unified framework for interpreting ECG (electrocardiogram) deep learning models through three complementary explanation approaches.
@@ -90,7 +89,7 @@ explainer = GradCAM(wrapper)
 result = explainer.explain(
     ecg_data,                    # (1, n_leads, seq_length)
     target=0,                    # class index
-    target_layer_name="conv3"    # layer to analyze
+    target_layers="conv3"        # layer to analyze
 )
 attribution = result["results"]  # importance scores
 ```
@@ -107,7 +106,7 @@ explainer = StyleGANCF(
 )
 cf_ecg, cf_prob, _ = explainer.explain(
     ecg_data,
-    target_idx=0,
+    target=0,
     target_value=1.0
 )
 ```
@@ -118,9 +117,9 @@ from execg.concept import TCAV
 
 explainer = TCAV(
     model=model,
-    model_layers_list=["conv3"],
-    model_input_sampling_rate=250,
-    model_input_duration=10,
+    target_layers=["conv3"],
+    sampling_rate=250,
+    duration=10,
     data_name="physionet2021",
     data_dir="/path/to/data",
     target_concepts=["atrial fibrillation", "sinus rhythm"]
@@ -142,7 +141,7 @@ execg/
 │   └── stylegan_cf.py
 ├── concept/         # Concept-based explanations
 │   └── tcav/        # TCAV implementation
-└── visualization/   # Plotting utilities
+└── visualizer/   # Plotting utilities
 ```
 
 ## Documentation
@@ -151,6 +150,7 @@ execg/
 - [Attribution Methods](docs/attribution.md) - GradCAM, SaliencyMap
 - [Counterfactual Explanation](docs/counterfactual.md) - StyleGAN-based generation
 - [TCAV Analysis](docs/tcav.md) - Concept-based explanations
+- [Visualizer](docs/visualizer.md) - ECG chart and XAI visualization
 
 
 ## License

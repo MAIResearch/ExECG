@@ -15,6 +15,7 @@ from captum.concept import Concept
 from captum.concept._utils.data_iterator import dataset_to_dataloader
 from scipy import stats
 
+from execg.concept.data_donwloader import download_tcav_concept_data
 from execg.misc import set_random_seed
 from execg.models.wrapper import TorchModelWrapper
 
@@ -32,27 +33,31 @@ class TCAV:
 
     Args:
         model: PyTorch model to explain.
-        model_layers_list: List of layer names to analyze with TCAV.
-        model_input_sampling_rate: Model input sampling rate (e.g., 250).
-        model_input_duration: Model input duration in seconds (e.g., 10).
+        target_layers: List of layer names to analyze with TCAV.
+        sampling_rate: Model input sampling rate (e.g., 250).
+        duration: Model input duration in seconds (e.g., 10).
         data_name: Dataset name (currently supports "physionet2021").
         data_dir: Directory containing ECG data (.npz files).
+            If data is not found, will download to this directory when download=True.
         target_concepts: List of concept names to analyze.
         num_random_concepts: Number of random concepts for statistical testing.
-        num_samples: Number of samples per concept.
+        n_samples: Number of samples per concept.
         random_seed: Random seed for reproducibility.
         output_dir: Directory to save TCAV results and intermediate data.
+        download: If True, download concept data if not found in data_dir.
+            Default: False
 
     Example:
         >>> tcav = TCAV(
         ...     model=model,
-        ...     model_layers_list=["conv3"],
-        ...     model_input_sampling_rate=250,
-        ...     model_input_duration=10,
+        ...     target_layers=["conv3"],
+        ...     sampling_rate=250,
+        ...     duration=10,
         ...     data_name="physionet2021",
-        ...     data_dir="/path/to/physionet_numpy",
+        ...     data_dir="./data/physionet2021",
         ...     target_concepts=["atrial fibrillation", "sinus rhythm"],
-        ...     output_dir="./tcav_results"
+        ...     output_dir="./tcav_results",
+        ...     download=True  # Download if data not found
         ... )
         >>> results = tcav.explain(inputs, target=1)
     """
@@ -60,25 +65,26 @@ class TCAV:
     def __init__(
         self,
         model: nn.Module,
-        model_layers_list: List[str],
-        model_input_sampling_rate: float,
-        model_input_duration: float,
+        target_layers: List[str],
+        sampling_rate: float,
+        duration: float,
         data_name: str,
         data_dir: str,
         target_concepts: List[str],
         num_random_concepts: int = 10,
-        num_samples: int = 200,
+        n_samples: int = 200,
         random_seed: int = 42,
         output_dir: Optional[str] = None,
+        download: bool = False,
     ):
         self.random_seed = random_seed
         set_random_seed(random_seed)
 
         self.model = TorchModelWrapper(model)
-        self.model_layers = model_layers_list
+        self.model_layers = target_layers
         self.device = next(model.parameters()).device
-        self.model_input_sampling_rate = model_input_sampling_rate
-        self.model_input_duration = model_input_duration
+        self.sampling_rate = sampling_rate
+        self.duration = duration
         self.target_concepts = target_concepts
         self.output_dir = output_dir
 
@@ -86,12 +92,19 @@ class TCAV:
             os.makedirs(output_dir, exist_ok=True)
 
         available_layers = self.model.get_layer_names()
-        invalid_layers = set(model_layers_list) - set(available_layers)
+        invalid_layers = set(target_layers) - set(available_layers)
         if invalid_layers:
             raise ValueError(
                 f"Invalid layers: {invalid_layers}. "
                 f"Available layers: {available_layers}"
             )
+
+        # Download concept data if needed
+        download_tcav_concept_data(
+            data_name=data_name,
+            data_dir=data_dir,
+            download=download,
+        )
 
         self.layer_attr_method = LayerIntegratedGradients(
             self.model.model, None, multiply_by_inputs=False
@@ -100,11 +113,11 @@ class TCAV:
         target_concept_datasets, random_concept_datasets = generate_datasets(
             data_name=data_name,
             data_dir=data_dir,
-            model_input_sampling_rate=model_input_sampling_rate,
-            model_input_duration=model_input_duration,
+            sampling_rate=sampling_rate,
+            duration=duration,
             target_concepts=target_concepts,
             num_random_concepts=num_random_concepts,
-            num_samples=num_samples,
+            n_samples=n_samples,
             random_seed=random_seed,
             device=self.device
         )
@@ -149,7 +162,7 @@ class TCAV:
             ValueError: If input shape doesn't match model requirements.
             ValueError: If score_type is invalid.
         """
-        expected_length = int(self.model_input_sampling_rate * self.model_input_duration)
+        expected_length = int(self.sampling_rate * self.duration)
         if inputs.shape[-1] != expected_length:
             raise ValueError(
                 f"Input length {inputs.shape[-1]} doesn't match expected {expected_length}"
@@ -265,9 +278,9 @@ class TCAV:
 
         Note:
             This is a convenience method. For more visualization options,
-            use execg.visualization.tcav module directly.
+            use execg.visualizer.tcav module directly.
         """
-        from execg.visualization.tcav import plot_tcav_scores as _plot_tcav_scores
+        from execg.visualizer.tcav import plot_tcav_scores as _plot_tcav_scores
 
         return _plot_tcav_scores(result_dict, cmap=cmap)
 

@@ -37,7 +37,7 @@ cf_explainer = StyleGANCF(
 ecg_data = torch.randn(1, 12, 2500)  # (batch, n_leads, seq_length)
 cf_ecg, cf_prob, etc = cf_explainer.explain(
     ecg_data,
-    target_idx=0,
+    target=0,
     target_value=1.0
 )
 ```
@@ -77,13 +77,13 @@ StyleGANCF(
 #### explain()
 
 ```python
-explain(inputs, target_idx, **kwargs)
+explain(inputs, target, **kwargs)
 ```
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `inputs` | torch.Tensor | required | ECG tensor `(1, 12, seq_length)` - must be 10 seconds |
-| `target_idx` | int | required | Target output index |
+| `target` | int | required | Target output index |
 | `target_value` | float | required | Desired prediction value |
 | `inversion_steps` | int | `1000` | Steps for W-inversion |
 | `inversion_lr` | float | `0.0005` | Learning rate for inversion |
@@ -140,7 +140,7 @@ original_prob = original_pred[0, original_class].item()
 target_class = 1 - original_class
 cf_ecg, cf_prob, etc = cf_explainer.explain(
     ecg_data,
-    target_idx=target_class,
+    target=target_class,
     target_value=1.0,
     inversion_steps=500,
     cf_steps=300,
@@ -160,7 +160,7 @@ original_value = wrapper.predict(ecg_data)[0, 0].item()
 # Generate CF for higher value
 cf_ecg, cf_prob, etc = cf_explainer.explain(
     ecg_data,
-    target_idx=0,  # Regression has single output
+    target=0,  # Regression has single output
     target_value=original_value + 1.0,
     inversion_steps=500,
     cf_steps=300
@@ -180,7 +180,7 @@ StyleGAN layers control different ECG characteristics:
 # Only optimize high-level features (morphology)
 cf_ecg, cf_prob, etc = cf_explainer.explain(
     ecg_data,
-    target_idx=0,
+    target=0,
     target_value=1.0,
     layer_use=[6, 7, 8, 9]  # Higher layers only
 )
@@ -188,7 +188,7 @@ cf_ecg, cf_prob, etc = cf_explainer.explain(
 # Only optimize rhythm features
 cf_ecg, cf_prob, etc = cf_explainer.explain(
     ecg_data,
-    target_idx=0,
+    target=0,
     target_value=1.0,
     layer_use=[0, 1, 2, 3]  # Lower layers only
 )
@@ -221,7 +221,7 @@ ExECG provides built-in visualization functions for counterfactual results.
 Overlay original and counterfactual ECG.
 
 ```python
-from execg.visualization import plot_counterfactual_overlay
+from execg.visualizer import plot_counterfactual_overlay
 
 plot_counterfactual_overlay(
     original_ecg=ecg_data.squeeze().numpy(),
@@ -236,7 +236,7 @@ plot_counterfactual_overlay(
 Show original, counterfactual, and difference.
 
 ```python
-from execg.visualization import plot_counterfactual_diff
+from execg.visualizer import plot_counterfactual_diff
 
 plot_counterfactual_diff(
     original_ecg=ecg_data.squeeze().numpy(),
@@ -251,14 +251,14 @@ plot_counterfactual_diff(
 Visualize optimization progress.
 
 ```python
-from execg.visualization import plot_counterfactual_progress
+from execg.visualizer import plot_counterfactual_progress
 
 cf_ecg, cf_prob, etc = cf_explainer.explain(...)
 
 plot_counterfactual_progress(
     all_probs=etc["all_probs"],
     target_value=1.0,
-    target_idx=0
+    target=0
 )
 ```
 
@@ -267,7 +267,7 @@ plot_counterfactual_progress(
 Show ECG changes during optimization.
 
 ```python
-from execg.visualization import plot_counterfactual_evolution
+from execg.visualizer import plot_counterfactual_evolution
 
 plot_counterfactual_evolution(
     all_cf=etc["all_cf"],
@@ -282,7 +282,7 @@ plot_counterfactual_evolution(
 Compare all 12 leads.
 
 ```python
-from execg.visualization import plot_counterfactual_all_leads
+from execg.visualizer import plot_counterfactual_all_leads
 
 original_prob = wrapper.predict(ecg_data)[0, target_class].item()
 
@@ -291,7 +291,7 @@ plot_counterfactual_all_leads(
     cf_ecg=cf_ecg,
     original_prob=original_prob,
     cf_prob=cf_prob,
-    target_idx=target_class,
+    target=target_class,
     figsize=(16, 18)
 )
 ```
@@ -302,7 +302,7 @@ plot_counterfactual_all_leads(
 import torch
 from execg.models import TorchModelWrapper
 from execg.counterfactual import StyleGANCF
-from execg.visualization import (
+from execg.visualizer import (
     plot_counterfactual_overlay,
     plot_counterfactual_diff,
     plot_counterfactual_progress
@@ -323,7 +323,7 @@ cf_explainer = StyleGANCF(
 ecg_data = torch.randn(1, 12, 2500)
 cf_ecg, cf_prob, etc = cf_explainer.explain(
     ecg_data,
-    target_idx=1,
+    target=1,
     target_value=0.9,
     verbose=True
 )
@@ -331,5 +331,5 @@ cf_ecg, cf_prob, etc = cf_explainer.explain(
 # Visualize
 plot_counterfactual_overlay(ecg_data.squeeze().numpy(), cf_ecg, lead_idx=1)
 plot_counterfactual_diff(ecg_data.squeeze().numpy(), cf_ecg, lead_idx=1)
-plot_counterfactual_progress(etc["all_probs"], target_value=0.9, target_idx=1)
+plot_counterfactual_progress(etc["all_probs"], target_value=0.9, target=1)
 ```

@@ -153,6 +153,38 @@ execg/
 - [Visualizer](docs/visualizer.md) - ECG chart and XAI visualization
 
 
+## Publications
+
+ExECG builds on and implements the explainability methods introduced in the following peer-reviewed and preprint works. If you use ExECG in your research, please cite the relevant paper(s).
+
+- **ExECG: An Explainable AI Framework for ECG models.**
+  Jong-Hwan Jang, Yong-Yeon Jo. *arXiv preprint* arXiv:2605.19258 (2026).
+  [arXiv](https://arxiv.org/abs/2605.19258)
+
+- **A novel XAI framework for explainable AI-ECG using generative counterfactual XAI (GCX).**
+  Jong-Hwan Jang, Yong-Yeon Jo, Sora Kang, Jeong Min Son, Hak Seung Lee, Joon-Myoung Kwon, Min Sung Lee. *Scientific Reports* **15**, 23608 (2025).
+  [DOI](https://doi.org/10.1038/s41598-025-08080-5) · [Nature](https://www.nature.com/articles/s41598-025-08080-5)
+
+- **CoFE: A Framework Generating Counterfactual ECG for Explainable Cardiac AI-Diagnostics.**
+  Jong-Hwan Jang, Junho Song, Yong-Yeon Jo. *IEEE ICASSP* (2026); *arXiv preprint* arXiv:2508.16033 (2025).
+  [arXiv](https://arxiv.org/abs/2508.16033)
+
+- **Transparent and Robust Artificial Intelligence-Driven Electrocardiogram Model for Left Ventricular Systolic Dysfunction.**
+  Min Sung Lee, Jong-Hwan Jang, Sora Kang, Ga In Han, Ah-Hyun Yoo, Yong-Yeon Jo, Jeong Min Son, Joon-Myoung Kwon, Sooyeon Lee, Ji Sung Lee, Hak Seung Lee, Kyung-Hee Kim. *Diagnostics* **15**(15), 1837 (2025).
+  [DOI](https://doi.org/10.3390/diagnostics15151837) · [MDPI](https://www.mdpi.com/2075-4418/15/15/1837)
+
+### Citation
+
+```bibtex
+@article{jang2026execg,
+  title   = {ExECG: An Explainable AI Framework for ECG models},
+  author  = {Jang, Jong-Hwan and Jo, Yong-Yeon},
+  journal = {arXiv preprint arXiv:2605.19258},
+  year    = {2026}
+}
+```
+
+
 ## License
 
 MIT License

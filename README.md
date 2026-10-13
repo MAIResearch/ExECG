@@ -141,6 +141,8 @@ execg/
 │   └── stylegan_cf.py
 ├── concept/         # Concept-based explanations
 │   └── tcav/        # TCAV implementation
+├── median_beat/     # Representative cohort beats and signal harmonization
+│   └── _vendor/rlign/ # Bundled R-peak alignment (MIT)
 └── visualizer/   # Plotting utilities
 ```
 
@@ -151,6 +153,7 @@ execg/
 - [Counterfactual Explanation](docs/counterfactual.md) - StyleGAN-based generation
 - [TCAV Analysis](docs/tcav.md) - Concept-based explanations
 - [Visualizer](docs/visualizer.md) - ECG chart and XAI visualization
+- [Median Beat](docs/median_beat.md) - Cohort median beat, with or without heart-rate correction
 
 
 ## Publications

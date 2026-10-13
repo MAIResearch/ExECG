@@ -23,8 +23,13 @@ from execg.visualizer import (
     # ECG Chart
     plot_ecg_chart,
     plot_ecg_comparison,
+    # Median Beat
+    plot_median_beats,
 )
 ```
+
+Use `plot_median_beats` to overlay representative beats across cohorts and leads.
+See [Median Beat](median_beat.md) for extraction, harmonization, and group comparison examples.
 
 ## Quick Start
 

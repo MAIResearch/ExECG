@@ -2,6 +2,7 @@
 
 from .models import TorchModelWrapper
 from .attribution import AttributionBase, GradCAM, SaliencyMap
+from .median_beat import MedianBeat, MedianBeatExtractor, RlignMedianBeat
 
 __version__ = "0.1.0"
 
@@ -10,4 +11,7 @@ __all__ = [
     "AttributionBase",
     "GradCAM",
     "SaliencyMap",
+    "MedianBeat",
+    "MedianBeatExtractor",
+    "RlignMedianBeat",
 ]

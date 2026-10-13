@@ -19,6 +19,9 @@ dependencies = [
     "tqdm",
     "gdown",
     "ipython",
+    # Runtime dependencies of the vendored rlign alignment library.
+    "neurokit2",
+    "scikit-learn",
 ]
 
 [project.optional-dependencies]
@@ -29,3 +32,6 @@ dev = [
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["execg*"]
+
+[tool.setuptools.package-data]
+"execg.median_beat._vendor.rlign" = ["LICENSE.txt", "VENDOR.md"]

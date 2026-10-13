@@ -8,3 +8,5 @@ requests
 tqdm
 gdown
 ipython
+neurokit2
+scikit-learn

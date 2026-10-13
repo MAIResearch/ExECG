@@ -4,6 +4,7 @@ This module provides visualization functions for different XAI methods:
 - attribution: Saliency maps, GradCAM, etc.
 - counterfactual: StyleGAN-based counterfactual explanations
 - tcav: Testing with Concept Activation Vectors
+- median beat: Cohort representative beat comparisons
 """
 
 from .attribution import (
@@ -34,6 +35,8 @@ from .ecg_chart import (
     plot_ecg_comparison,
 )
 
+from .median_beat import plot_median_beats
+
 __all__ = [
     "add_attribution_heatmap",
     "bin_attribution",
@@ -52,4 +55,5 @@ __all__ = [
     "plot_tcav_comparison",
     "plot_ecg_chart",
     "plot_ecg_comparison",
+    "plot_median_beats",
 ]
